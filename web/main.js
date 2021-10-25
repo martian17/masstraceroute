@@ -54,19 +54,20 @@ let Graph = function(){
         let dy = v2.y-v1.y;
         return dx*dx+dy*dy;
     };
-    let G = -0.01;
-    let K = 0.01;//hooke's law
+    let G = -0.0001;//-0.01;
+    let K = 2;//0.01;//hooke's law
     this.adjustPosition = function(){
-        let dt = 0.1;
+        let dt = 0.016;
         for(let id1 in this.verts){
-            let v1 = this.vert[id1];
+            let v1 = this.verts[id1];
             
             //gravity
             for(let id2 in this.verts){
-                let v2 = this.vert[id2];
+                let v2 = this.verts[id2];
+                if(v1 == v2) continue;
                 let dx = v2.x-v1.x;
                 let dy = v2.y-v1.y;
-                let dist2 = (dx*dx+dy*dy);
+                let dist2 = (dx*dx+dy*dy+0.01);//small omega, basically appeasement
                 let dist = Math.sqrt(dist2);
                 let a = G*v2.weight/dist2;
                 v1.vx += a*dx/dist;
@@ -76,12 +77,13 @@ let Graph = function(){
             //spring force
             for(let id2 in v1.edges){
                 let edge = v1.edges[id2];
-                let v2 = this.vert[id2];
+                let v2 = this.verts[id2];
+                if(v1 == v2) continue;
                 let dx = v2.x-v1.x;
                 let dy = v2.y-v1.y;
                 let dist2 = (dx*dx+dy*dy);
                 let dist = Math.sqrt(dist2);
-                let a = -K(dist-1);
+                let a = K*(dist-0.01);
                 v1.vx += a*dx/dist;
                 v1.vy += a*dy/dist;
             }
@@ -89,7 +91,9 @@ let Graph = function(){
         
         //apply the force, acceleration, and velocity to calculate the position
         for(let id in this.verts){
-            let vert = this.vert;
+            let vert = this.verts[id];
+            vert.vx *= 0.9;
+            vert.vy *= 0.9;
             vert.x += dt*vert.vx;
             vert.y += dt*vert.vy;
         }
@@ -108,6 +112,7 @@ let Graph = function(){
     }*/
 };
 
+let step;
 
 let main = async function(){
     //loading graph and shit
@@ -129,27 +134,31 @@ let main = async function(){
     console.log(routes);
     //adding edges
     let g = new Graph();
-    let lastNodes = routes[0].map(n=>{
-        return g.addVert(n);
-    });
-    if(lastNodes.length === 0){
-        lastNodes = [g.addVert("")];//empty -> special case
-    }
-    for(let i = 1; i < routes.length; i++){
-        let nodes = routes[0].map(n=>{
+    routes.map(route=>{
+        //console.log(route);
+        let lastNodes = route[0].map(n=>{
             return g.addVert(n);
         });
-        if(nodes.length === 0){
-            nodes = [g.addVert("")];//empty -> special case
+        if(lastNodes.length === 0){
+            lastNodes = [g.addVert("")];//empty -> special case
         }
-        //node setup complete, just connect from this point on
-        for(let j = 0; j < lastNodes.length; j++){
-            for(let k = 0; k < nodes.length; k++){
-                g.addEdge(lastNodes[j],nodes[k]);
+        for(let i = 1; i < route.length; i++){
+            let nodes = route[i].map(n=>{
+                return g.addVert(n);
+            });
+            if(nodes.length === 0){
+                nodes = [g.addVert("")];//empty -> special case
             }
+            //node setup complete, just connect from this point on
+            for(let j = 0; j < lastNodes.length; j++){
+                for(let k = 0; k < nodes.length; k++){
+                    g.addEdge(lastNodes[j],nodes[k]);
+                    //console.log(lastNodes[j].id,nodes[k].id);
+                }
+            }
+            lastNodes = nodes;
         }
-        lastNodes = nodes;
-    }
+    });
     
     //initialization complete
     let canvas = document.querySelector("#canvas");
@@ -161,6 +170,7 @@ let main = async function(){
     
     
     let render = function(){
+        ctx.clearRect(0,0,width,height);
         for(let key in g.verts){
             let vert = g.verts[key];
             let x = width/2+vert.x*100;
@@ -181,12 +191,19 @@ let main = async function(){
             ctx.beginPath();
             ctx.moveTo(x1,y1);
             ctx.lineTo(x2,y2);
-            ctx.lineWidth = Math.sqrt(edge.weight)/10;
+            ctx.lineWidth = Math.sqrt(edge.weight);
             ctx.stroke();
         }
     };
     
     render();
+    
+    step = function(){
+        g.adjustPosition();
+        render();
+        requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
 };
 
 main();
