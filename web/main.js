@@ -54,8 +54,8 @@ let Graph = function(){
         let dy = v2.y-v1.y;
         return dx*dx+dy*dy;
     };
-    let G = -0.0001;//-0.01;
-    let K = 2;//0.01;//hooke's law
+    let G = -0.001;//-0.01;
+    let K = 3;//0.01;//hooke's law
     this.adjustPosition = function(){
         let dt = 0.016;
         for(let id1 in this.verts){
@@ -83,7 +83,7 @@ let Graph = function(){
                 let dy = v2.y-v1.y;
                 let dist2 = (dx*dx+dy*dy);
                 let dist = Math.sqrt(dist2);
-                let a = K*(dist-0.01);
+                let a = K*(dist-0.05);
                 v1.vx += a*dx/dist;
                 v1.vy += a*dy/dist;
             }
@@ -92,8 +92,8 @@ let Graph = function(){
         //apply the force, acceleration, and velocity to calculate the position
         for(let id in this.verts){
             let vert = this.verts[id];
-            vert.vx *= 0.9;
-            vert.vy *= 0.9;
+            vert.vx *= 0.95;
+            vert.vy *= 0.95;
             vert.x += dt*vert.vx;
             vert.y += dt*vert.vy;
         }
@@ -122,7 +122,7 @@ let main = async function(){
         let rows = host[1].trim().split("\n");
         let ip = rows[0].match(/[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/)[0];
         console.log(name,ip);
-        let route = rows.map(row=>{
+        let route = rows.slice(1).map(row=>{
             //console.log(row);
             let matches = row.match(/[^\s]+\s+\([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+\)/g) || [];
             //console.log(matches);
@@ -134,6 +134,13 @@ let main = async function(){
     console.log(routes);
     //adding edges
     let g = new Graph();
+    //test code
+    /*
+    g.addEdge(g.addVert("1"),g.addVert("2"));
+    g.addEdge(g.addVert("1"),g.addVert("3"));
+    g.addEdge(g.addVert("1"),g.addVert("4"));
+    g.addEdge(g.addVert("4"),g.addVert("5"));
+    console.log(routes[0]);*/
     routes.map(route=>{
         //console.log(route);
         let lastNodes = route[0].map(n=>{
@@ -173,8 +180,8 @@ let main = async function(){
         ctx.clearRect(0,0,width,height);
         for(let key in g.verts){
             let vert = g.verts[key];
-            let x = width/2+vert.x*100;
-            let y = height/2+vert.y*100;
+            let x = width/2+vert.x*30;
+            let y = height/2+vert.y*30;
             ctx.beginPath();
             ctx.arc(x,y,Math.sqrt(vert.weight),0,6.28);
             ctx.closePath();
@@ -184,10 +191,10 @@ let main = async function(){
             let edge = g.edges[i];
             let v1 = edge.verts[0];
             let v2 = edge.verts[1];
-            let x1 = width/2+v1.x*100;
-            let y1 = height/2+v1.y*100;
-            let x2 = width/2+v2.x*100;
-            let y2 = height/2+v2.y*100;
+            let x1 = width/2+v1.x*30;
+            let y1 = height/2+v1.y*30;
+            let x2 = width/2+v2.x*30;
+            let y2 = height/2+v2.y*30;
             ctx.beginPath();
             ctx.moveTo(x1,y1);
             ctx.lineTo(x2,y2);
