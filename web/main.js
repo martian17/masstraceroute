@@ -54,7 +54,7 @@ let Graph = function(){
         let dy = v2.y-v1.y;
         return dx*dx+dy*dy;
     };
-    let G = -0.001;//-0.01;
+    let G = -0.01;//-0.01;
     let K = 3;//0.01;//hooke's law
     this.adjustPosition = function(){
         let dt = 0.016;
@@ -67,7 +67,7 @@ let Graph = function(){
                 if(v1 == v2) continue;
                 let dx = v2.x-v1.x;
                 let dy = v2.y-v1.y;
-                let dist2 = (dx*dx+dy*dy+0.01);//small omega, basically appeasement
+                let dist2 = (dx*dx+dy*dy+0.001);//small omega, basically appeasement
                 let dist = Math.sqrt(dist2);
                 let a = G*v2.weight/dist2;
                 v1.vx += a*dx/dist;
@@ -117,6 +117,7 @@ let step;
 let main = async function(){
     //loading graph and shit
     let json = await (await fetch(window.location.href+"result.json")).text();
+    let destinations = {};
     let routes = JSON.parse(json).map(host =>{
         let name = host[0];
         let rows = host[1].trim().split("\n");
@@ -127,8 +128,10 @@ let main = async function(){
             let matches = row.match(/[^\s]+\s+\([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+\)/g) || [];
             //console.log(matches);
             return matches;
-        });
+        }).filter(r=>r.length !== 0);
+        route[0] = ["_gateway (192.168.1.1)"];
         route[route.length-1] = [`${name} (${ip})`];
+        destinations[`${name} (${ip})`] = true;
         return route;
     });
     console.log(routes);
@@ -141,6 +144,7 @@ let main = async function(){
     g.addEdge(g.addVert("1"),g.addVert("4"));
     g.addEdge(g.addVert("4"),g.addVert("5"));
     console.log(routes[0]);*/
+    console.log(routes.length);
     routes.map(route=>{
         //console.log(route);
         let lastNodes = route[0].map(n=>{
@@ -165,12 +169,13 @@ let main = async function(){
             }
             lastNodes = nodes;
         }
+        lastNodes[0].weight = 3;
     });
     
     //initialization complete
     let canvas = document.querySelector("#canvas");
-    let width = 500;
-    let height = 500;
+    let width = 1000;
+    let height = 1000;
     canvas.width = width;
     canvas.height = height;
     let ctx = canvas.getContext("2d");
@@ -178,15 +183,7 @@ let main = async function(){
     
     let render = function(){
         ctx.clearRect(0,0,width,height);
-        for(let key in g.verts){
-            let vert = g.verts[key];
-            let x = width/2+vert.x*30;
-            let y = height/2+vert.y*30;
-            ctx.beginPath();
-            ctx.arc(x,y,Math.sqrt(vert.weight),0,6.28);
-            ctx.closePath();
-            ctx.fill();
-        }
+        
         for(let i = 0; i < g.edges.length; i++){
             let edge = g.edges[i];
             let v1 = edge.verts[0];
@@ -198,8 +195,32 @@ let main = async function(){
             ctx.beginPath();
             ctx.moveTo(x1,y1);
             ctx.lineTo(x2,y2);
+            ctx.strokeStyle = "#aaa";
             ctx.lineWidth = Math.sqrt(edge.weight);
             ctx.stroke();
+        }
+        
+        for(let key in g.verts){
+            let vert = g.verts[key];
+            let x = width/2+vert.x*30;
+            let y = height/2+vert.y*30;
+            ctx.beginPath();
+            ctx.fillStyle = "#444";
+            let weight = vert.weight;
+            if(vert.id === "_gateway (192.168.1.1)"){
+                ctx.fillStyle = "#F00";
+            }else if(key in destinations){
+                ctx.fillStyle = "#0F0";
+            }
+            ctx.arc(x,y,Math.sqrt(weight),0,6.28);
+            ctx.closePath();
+            ctx.fill();
+            
+            if(key in destinations){//label
+                ctx.font = "12px serif";
+                ctx.fillStyle = "#000";
+                ctx.fillText(key.split(/\s+/)[0],x,y);
+            }
         }
     };
     
